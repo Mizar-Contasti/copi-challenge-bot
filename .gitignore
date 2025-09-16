@@ -1,0 +1,8 @@
+instructions.md
+.env.dev
+.env.prod
+work-plan.md
+deploy.ps1
+deploy.sh
+test_spanish_fallback.py
+reset-and-run.ps1

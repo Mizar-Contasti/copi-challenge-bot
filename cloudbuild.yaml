@@ -1,0 +1,36 @@
+steps:
+  # Build the container image
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['build', '-t', 'gcr.io/$PROJECT_ID/copi-challenge-bot:$COMMIT_SHA', '.']
+  
+  # Push the container image to Container Registry
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['push', 'gcr.io/$PROJECT_ID/copi-challenge-bot:$COMMIT_SHA']
+  
+  # Deploy container image to Cloud Run
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: gcloud
+    args:
+    - 'run'
+    - 'deploy'
+    - 'copi-challenge-bot'
+    - '--image'
+    - 'gcr.io/$PROJECT_ID/copi-challenge-bot:$COMMIT_SHA'
+    - '--region'
+    - 'us-central1'
+    - '--platform'
+    - 'managed'
+    - '--allow-unauthenticated'
+    - '--port'
+    - '8000'
+    - '--memory'
+    - '1Gi'
+    - '--cpu'
+    - '1'
+    - '--max-instances'
+    - '10'
+    - '--set-env-vars'
+    - 'ENVIRONMENT=production,BASE_URL=https://copi-challenge-bot-272897586446.us-central1.run.app,API_BASE_URL=https://copi-challenge-bot-272897586446.us-central1.run.app,SWAGGER_DOCS_URL=https://copi-challenge-bot-272897586446.us-central1.run.app/docs'
+
+images:
+  - 'gcr.io/$PROJECT_ID/copi-challenge-bot:$COMMIT_SHA'

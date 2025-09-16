@@ -1,0 +1,42 @@
+# Ignore development files
+.env.dev
+.env
+*.log
+.git/
+.gitignore
+
+# Ignore local database files
+conversations.db
+*.db
+
+# Ignore Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.so
+
+# Ignore IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Ignore test files
+tests/
+test_*.py
+*_test.py
+
+# Ignore documentation
+README.md
+work-plan.md
+instructions.md
+
+# Ignore local development
+docker-compose.yml
+Makefile
+postman/
+
+# Ignore data directory
+data/
