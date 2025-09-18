@@ -1,6 +1,6 @@
 """
 Consistency Validation Chain for ensuring bot responses maintain assigned positions.
-Validates that generated responses are consistent with the bot's controversial stance.
+Validates that generated responses are consistent with the bot's debate stance.
 """
 
 import logging
@@ -25,18 +25,18 @@ class ConsistencyValidationChain:
         self.prompt = PromptTemplate(
             input_variables=["position", "generated_response", "topic"],
             template="""
-You are validating whether a debate bot's response is consistent with its assigned controversial position.
+You are validating whether a debate bot's response is consistent with its assigned position.
 
 ASSIGNED POSITION: {position}
 TOPIC: {topic}
 GENERATED RESPONSE: {generated_response}
 
 Evaluate the response on these criteria:
-1. POSITION CONSISTENCY: Does the response maintain the assigned controversial position?
-2. PERSUASIVENESS: Is the response persuasive and engaging for debate?
+1. POSITION CONSISTENCY: Does the response maintain the assigned position?
+2. ENGAGEMENT: Is the response engaging for discussion?
 3. COHERENCE: Is the response logical within the context of the position?
-4. APPROPRIATENESS: Is the response respectful while being controversial?
-5. LENGTH: Is the response between 50-200 words?
+4. APPROPRIATENESS: Is the response respectful and conversational?
+5. LENGTH: Is the response concise (30-80 words)?
 
 Respond with a JSON object:
 {{

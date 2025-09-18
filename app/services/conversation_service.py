@@ -7,7 +7,6 @@ from typing import Dict, Any, List, Optional, Tuple
 from app.models.database import db_manager
 from app.chains import (
     topic_analysis_chain,
-    position_assignment_chain,
     persuasive_response_chain,
     consistency_validation_chain
 )
@@ -27,7 +26,6 @@ class ConversationService:
         """Initialize the conversation service with chain instances and validators."""
         # Initialize chain instances
         self.topic_analysis = topic_analysis_chain
-        self.position_assignment = position_assignment_chain
         self.persuasive_response = persuasive_response_chain
         self.consistency_validation = consistency_validation_chain
         
@@ -51,22 +49,17 @@ class ConversationService:
         try:
             logger.info(f"[CONVERSATION_SERVICE] START_NEW_CONVERSATION: user_message='{user_message}'")
             
-            # Step 1: Analyze topic
-            logger.info("[CONVERSATION_SERVICE] Step 1: Analyzing topic")
+            # Step 1: Analyze topic and generate bot position
+            logger.info("[CONVERSATION_SERVICE] Step 1: Analyzing topic and generating bot position")
             topic_data = self.topic_analysis.analyze_topic(user_message)
             logger.info(f"[CONVERSATION_SERVICE] Topic analysis result: {topic_data}")
             
-            # Step 2: Assign controversial position (pass user_message for language detection)
-            logger.info(f"[CONVERSATION_SERVICE] Step 2: Assigning position for topic: {topic_data['topic']}")
-            topic_data["user_message"] = user_message  # Add user message for language detection
-            position = self.position_assignment.assign_position(topic_data)
-            logger.info(f"[CONVERSATION_SERVICE] Position assigned: {position}")
-            
-            # Step 3: Create conversation in database
-            logger.info("[CONVERSATION_SERVICE] Step 3: Creating conversation in database")
+            # Step 2: Create conversation in database with original topic
+            logger.info("[CONVERSATION_SERVICE] Step 2: Creating conversation in database")
             conversation_id = db_manager.create_conversation(
                 topic=topic_data["topic"],
-                bot_position=position
+                bot_position=topic_data["bot_position"],
+                original_topic=user_message  # Store the original user message
             )
             logger.info(f"[CONVERSATION_SERVICE] Conversation created with ID: {conversation_id}")
             
@@ -79,7 +72,7 @@ class ConversationService:
             bot_response = self._generate_response(
                 user_message=user_message,
                 topic_data=topic_data,
-                position=position,
+                position=topic_data["bot_position"],
                 conversation_history=[]
             )
             logger.info(f"[CONVERSATION_SERVICE] Bot response generated: {bot_response}")
@@ -145,14 +138,15 @@ class ConversationService:
             # Step 4: Get conversation history for context
             conversation_history = db_manager.get_conversation_history(conversation_id)
             
-            # Step 5: Generate bot response
+            # Step 5: Generate bot response using original topic as reference
             bot_response = self._generate_response(
                 user_message=user_message,
                 position=conversation["bot_position"],
                 conversation_history=conversation_history,
                 conversation_id=conversation_id,
                 turn=next_turn,
-                conversation_data=conversation
+                conversation_data=conversation,
+                original_topic=conversation["original_topic"]  # Pass original topic for consistency
             )
             
             # Step 6: Add bot message
@@ -194,7 +188,8 @@ class ConversationService:
         conversation_history: Optional[List[Dict[str, Any]]] = None,
         conversation_id: Optional[str] = None,
         turn: Optional[int] = None,
-        conversation_data: Optional[Dict[str, Any]] = None
+        conversation_data: Optional[Dict[str, Any]] = None,
+        original_topic: Optional[str] = None
     ) -> str:
         """
         Generate bot response using AI chains with validation and fallbacks.

@@ -23,6 +23,7 @@ class Conversation(Base):
     id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
     topic = Column(String, nullable=False)
     bot_position = Column(Text, nullable=False)
+    original_topic = Column(Text, nullable=False)  # Store the original user message that started the debate
     max_turns = Column(Integer, default=0)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
@@ -69,12 +70,13 @@ class DatabaseManager:
         """Get a database session."""
         return self.SessionLocal()
     
-    def create_conversation(self, topic: str, bot_position: str) -> str:
+    def create_conversation(self, topic: str, bot_position: str, original_topic: str) -> str:
         """Create a new conversation and return its ID."""
         with self.get_session() as session:
             conversation = Conversation(
                 topic=topic,
-                bot_position=bot_position
+                bot_position=bot_position,
+                original_topic=original_topic
             )
             session.add(conversation)
             session.commit()
@@ -95,6 +97,7 @@ class DatabaseManager:
                 "id": conversation.id,
                 "topic": conversation.topic,
                 "bot_position": conversation.bot_position,
+                "original_topic": conversation.original_topic,
                 "max_turns": conversation.max_turns,
                 "created_at": conversation.created_at,
                 "updated_at": conversation.updated_at

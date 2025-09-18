@@ -24,36 +24,39 @@ class TopicAnalysisChain:
         self.prompt = PromptTemplate(
             input_variables=["user_message"],
             template="""
-Analyze the following user message and identify the main topic for a debate.
+Analyze this user message to understand what they're discussing and determine how to engage in debate.
 
 User message: "{user_message}"
 
-Your task is to:
-1. Identify the core topic or subject matter
-2. Determine if it relates to any controversial subjects
-3. Classify the topic into one of these categories or create a new one:
-   - Climate Change
-   - Vaccines and Health
-   - Flat Earth vs Spherical Earth
-   - Artificial Intelligence and Jobs
-   - Social Media and Privacy
-   - Other (specify)
+Tasks:
+1. Identify the main topic being discussed
+2. Determine if the user has taken a clear position, or if they're asking a neutral question
+3. If they have a position, take the opposing stance
+4. If they're asking a neutral question (like "which is better X or Y?"), pick one side to defend
+5. Keep it reasonable and focused on the actual topic
 
-Respond with a JSON object containing:
+Return ONLY a JSON object with these fields:
 - "topic": Brief topic name (max 50 characters)
-- "category": One of the categories above
-- "description": Detailed description of what the debate should focus on
-- "controversy_level": Scale 1-10 (10 being most controversial)
+- "user_position": What the user believes/argues (or "neutral question" if they haven't taken a stance)
+- "bot_position": Your position to argue for (be specific and direct)
+- "controversy_level": Number 1-10
 
-Example response:
+Examples:
 {{
-    "topic": "Human-caused climate change",
-    "category": "Climate Change", 
-    "description": "Debate about whether climate change is primarily caused by human activities or natural phenomena",
-    "controversy_level": 8
+    "topic": "Remote work productivity",
+    "user_position": "Working from home is more productive",
+    "bot_position": "Office work is more productive due to better collaboration and fewer distractions",
+    "controversy_level": 6
 }}
 
-Only respond with the JSON object, no additional text.
+{{
+    "topic": "Cola preference",
+    "user_position": "neutral question",
+    "bot_position": "Pepsi is superior to Coca-Cola due to its sweeter taste and better marketing",
+    "controversy_level": 3
+}}
+
+Return only the JSON, no markdown formatting or extra text.
 """
         )
     
@@ -63,7 +66,7 @@ Only respond with the JSON object, no additional text.
     
     @property
     def output_keys(self) -> list[str]:
-        return ["topic", "category", "description", "controversy_level"]
+        return ["topic", "user_position", "bot_position", "controversy_level"]
     
     def analyze_topic(self, user_message: str) -> Dict[str, Any]:
         """Analyze user message to identify debate topic."""
@@ -82,14 +85,32 @@ Only respond with the JSON object, no additional text.
             raw_response = response.content if hasattr(response, 'content') else str(response)
             logger.info(f"[TOPIC_ANALYSIS] LLM_RESPONSE: {raw_response}")
             
-            # Parse JSON response
+            # Parse JSON response - handle markdown code blocks
             import json
-            result = json.loads(raw_response)
+            import re
+            
+            # Remove markdown code blocks if present
+            json_text = raw_response.strip()
+            if json_text.startswith('```'):
+                # Extract JSON from markdown code block
+                json_match = re.search(r'```(?:json)?\s*(\{.*?\})\s*```', json_text, re.DOTALL)
+                if json_match:
+                    json_text = json_match.group(1)
+                else:
+                    # Fallback: remove first and last lines if they contain ```
+                    lines = json_text.split('\n')
+                    if lines[0].strip().startswith('```'):
+                        lines = lines[1:]
+                    if lines and lines[-1].strip().endswith('```'):
+                        lines = lines[:-1]
+                    json_text = '\n'.join(lines)
+            
+            result = json.loads(json_text)
             
             output = {
                 "topic": result.get("topic", "General Discussion"),
-                "category": result.get("category", "Other"),
-                "description": result.get("description", "General debate topic"),
+                "user_position": result.get("user_position", "User's stated position"),
+                "bot_position": result.get("bot_position", "Contrarian position to be defended"),
                 "controversy_level": result.get("controversy_level", 5)
             }
             
@@ -101,8 +122,8 @@ Only respond with the JSON object, no additional text.
             # Fallback if analysis fails
             fallback_output = {
                 "topic": "General Discussion",
-                "category": "Other", 
-                "description": f"Debate about: {user_message[:100]}...",
+                "user_position": f"User's position: {user_message[:100]}...",
+                "bot_position": "I will take a contrarian stance to encourage healthy debate",
                 "controversy_level": 5
             }
             logger.info(f"[TOPIC_ANALYSIS] FALLBACK_OUTPUT: {fallback_output}")

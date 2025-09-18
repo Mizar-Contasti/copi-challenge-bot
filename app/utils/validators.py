@@ -11,10 +11,11 @@ class ResponseValidator:
     """Validates bot responses for quality and consistency."""
     
     def __init__(self):
-        self.min_length = 10  # Minimum characters
-        self.max_length = 2500  # Maximum characters - increased for persuasive responses
-        self.min_words = 5
-        self.max_words = 500  # Maximum words - increased for detailed arguments
+        # Prompt suggests 30-80 words, but validator has tolerance buffer
+        self.min_length = 10  # Minimum viable response
+        self.max_length = 3000  # Generous buffer beyond prompt suggestion
+        self.min_words = 5  # Much lower than prompt minimum (30) for tolerance
+        self.max_words = 200  # Much higher than prompt maximum (80) for tolerance
     
     def validate_response_length(self, response: str) -> Tuple[bool, List[str]]:
         """Validate response length constraints."""
@@ -56,9 +57,7 @@ class ResponseValidator:
         if any(phrase in response_lower for phrase in generic_phrases):
             issues.append("Response is too generic or uncertain")
         
-        # Check if response is just repeating the position without elaboration
-        if len(response.split()) < 20 and position.lower() in response_lower:
-            issues.append("Response is just repeating the position without elaboration")
+        # Removed strict elaboration check - any response that maintains position is valid
         
         return len(issues) == 0, issues
     
@@ -67,17 +66,7 @@ class ResponseValidator:
         issues = []
         response_lower = response.lower()
         
-        # Check for engagement elements
-        engagement_indicators = [
-            "?", "what if", "consider", "think about", "have you",
-            "but", "however", "actually", "really", "question"
-        ]
-        
-        has_engagement = any(indicator in response_lower for indicator in engagement_indicators)
-        
-        if not has_engagement:
-            issues.append("Response lacks engagement elements (questions, challenges, etc.)")
-        
+        # Removed engagement requirements - bot just needs to maintain position
         # Check for conversation enders
         conversation_enders = [
             "end of discussion", "nothing more to say", "that's final",
